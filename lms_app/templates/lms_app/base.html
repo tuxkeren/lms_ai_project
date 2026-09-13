@@ -18,7 +18,10 @@
                         <a href="{% url 'dashboard_instruktur' %}" class="text-blue-600 hover:underline">Dashboard</a>
                         <a href="/admin/" class="text-blue-600 hover:underline">Admin</a>
                     {% endif %}
-                    <a href="/admin/logout/" class="text-gray-500 hover:underline">Logout</a>
+                    <form method="POST" action="{% url 'logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-500 hover:underline cursor-pointer">Logout</button>
+                    </form>
                 {% endif %}
             </div>
         </div>

@@ -94,6 +94,19 @@ class ViewTestCase(TestCase):
         response = self.client.get(f'/soal/{self.soal.id}/jawab/')
         self.assertEqual(response.status_code, 302)
 
+    def test_logout_melalui_post(self):
+        self.client.login(username='siswa', password='tes12345')
+        response = self.client.post('/logout/')
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/')
+        page = self.client.get('/')
+        self.assertNotContains(page, 'siswa')
+
+    def test_logout_menolak_get(self):
+        self.client.login(username='siswa', password='tes12345')
+        response = self.client.get('/logout/')
+        self.assertEqual(response.status_code, 405)
+
     def test_form_jawab_ditampilkan_untuk_siswa_yang_enroll(self):
         self.client.login(username='siswa', password='tes12345')
         response = self.client.get(f'/soal/{self.soal.id}/jawab/')

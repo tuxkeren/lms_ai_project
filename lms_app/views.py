@@ -1,10 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 from django.utils import timezone
 from .models import Ujian, Soal, JawabanSiswa, PenilaianAI
 from .services import is_student, terdaftar_di_kursus
 from .tasks import proses_penilaian_ai
+
+
+@require_POST
+def keluar(request):
+    logout(request)
+    return redirect('beranda')
 
 
 def beranda(request):
