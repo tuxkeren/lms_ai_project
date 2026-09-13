@@ -1,78 +1,82 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard Instruktur - Penilaian AI</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f9fafb; color: #333; }
-        h2 { color: #1f2937; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { padding: 12px 15px; border: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-        th { background-color: #f3f4f6; font-weight: bold; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; color: white; }
-        .badge-pending { background-color: #f59e0b; }
-        .badge-processing { background-color: #3b82f6; }
-        .badge-completed { background-color: #10b981; }
-        .badge-failed { background-color: #ef4444; }
-        form { display: flex; gap: 8px; align-items: center; margin: 0; }
-        input[type="number"] { width: 70px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; }
-        button { padding: 6px 12px; background-color: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #1d4ed8; }
-        .feedback { font-size: 13px; color: #4b5563; margin-top: 5px; font-style: italic; }
-    </style>
-</head>
-<body>
-    <h2>Dashboard Penilaian Jawaban Siswa</h2>
-    <p>Kelola dan tinjau hasil analisis kecerdasan buatan untuk ujian esai.</p>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Siswa & Ujian</th>
-                <th>Soal & Jawaban</th>
-                <th>Status AI</th>
-                <th>Skor AI</th>
-                <th>Feedback AI</th>
-                <th>Skor Akhir Instruktur</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in daftar_penilaian %}
-            <tr>
-                <td>
-                    <strong>{{ p.jawaban.siswa.username }}</strong><br>
-                    <small style="color: #6b7280;">{{ p.jawaban.soal.ujian.judul }}</small>
-                </td>
-                <td>
-                    <strong>Soal:</strong> {{ p.jawaban.soal.teks_soal|truncatechars:60 }}<br>
-                    <div style="margin-top: 6px; background: #f9fafb; padding: 6px; border-radius: 4px;">
-                        <strong>Jawaban:</strong> {{ p.jawaban.teks_jawaban }}
-                    </div>
-                </td>
-                <td>
-                    <span class="badge badge-{{ p.status|lower }}">{{ p.get_status_display }}</span>
-                </td>
-                <td>
-                    <strong>{{ p.skor_ai|default:"-" }}</strong>
-                </td>
-                <td>
-                    <div class="feedback">{{ p.feedback_ai|default:"Menunggu proses..." }}</div>
-                </td>
-                <td>
-                    <form method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="penilaian_id" value="{{ p.id }}">
-                        <input type="number" step="0.01" name="skor_akhir" value="{{ p.skor_akhir_instruktur|default:p.skor_ai|default:'' }}" required>
-                        <button type="submit">Simpan</button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align: center; color: #6b7280;">Belum ada jawaban siswa yang masuk.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
+{% extends 'lms_app/base.html' %}
+
+{% block judul %}Dashboard Instruktur - LMS AI{% endblock %}
+
+{% block konten %}
+    <h1 class="text-2xl font-bold text-gray-900 mb-1">Dashboard Penilaian Jawaban Siswa</h1>
+    <p class="text-gray-600 mb-6">Kelola dan tinjau hasil analisis kecerdasan buatan untuk ujian esai.</p>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr class="text-gray-600">
+                    <th class="px-4 py-3 font-semibold">Siswa & Ujian</th>
+                    <th class="px-4 py-3 font-semibold">Soal & Jawaban</th>
+                    <th class="px-4 py-3 font-semibold">Status AI</th>
+                    <th class="px-4 py-3 font-semibold">Skor AI</th>
+                    <th class="px-4 py-3 font-semibold">Feedback AI</th>
+                    <th class="px-4 py-3 font-semibold">Skor Akhir</th>
+                    <th class="px-4 py-3 font-semibold">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for p in daftar_penilaian %}
+                <tr class="align-top">
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">{{ p.jawaban.siswa.username }}</div>
+                        <div class="text-xs text-gray-500">{{ p.jawaban.soal.ujian.judul }}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">{{ p.jawaban.soal.teks_soal|truncatechars:80 }}</div>
+                        <div class="mt-1 bg-gray-50 border border-gray-100 rounded p-2 text-xs text-gray-600">
+                            {{ p.jawaban.teks_jawaban }}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if p.status == 'COMPLETED' %}
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Selesai</span>
+                        {% elif p.status == 'PROCESSING' %}
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Diproses</span>
+                        {% elif p.status == 'FAILED' %}
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Gagal</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Menunggu</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 font-semibold text-gray-900">{{ p.skor_ai|default:"-" }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 italic">{{ p.feedback_ai|default:"Menunggu proses..." }}</td>
+                    <td class="px-4 py-3">
+                        <form method="POST" class="flex items-center gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="penilaian_id" value="{{ p.id }}">
+                            <input type="number" step="0.01" name="skor_akhir"
+                                   value="{{ p.skor_akhir_instruktur|default:p.skor_ai|default:'' }}"
+                                   class="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   required>
+                            <button type="submit"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-md transition">Simpan</button>
+                        </form>
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if p.status == 'PENDING' or p.status == 'FAILED' %}
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="penilaian_id" value="{{ p.id }}">
+                            <input type="hidden" name="aksi" value="proses_ulang">
+                            <button type="submit"
+                                    class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-3 py-1.5 rounded-md transition">Proses Ulang</button>
+                        </form>
+                        {% else %}
+                        <span class="text-xs text-gray-300">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-gray-500">Belum ada jawaban siswa yang masuk.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

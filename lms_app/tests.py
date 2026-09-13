@@ -135,3 +135,23 @@ class ViewTestCase(TestCase):
         self.client.login(username='admin', password='tes12345')
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
+
+    def test_dashboard_proses_ulang_penilaian(self):
+        from unittest.mock import patch
+        from .models import PenilaianAI
+
+        jawaban = JawabanSiswa.objects.create(
+            soal=self.soal, siswa=self.siswa, teks_jawaban='jawaban uji')
+        penilaian = PenilaianAI.objects.create(jawaban=jawaban)
+
+        self.client.login(username='admin', password='tes12345')
+        with patch('lms_app.views.proses_penilaian_ai.delay') as mock_delay:
+            response = self.client.post('/dashboard/', {
+                'penilaian_id': penilaian.id,
+                'aksi': 'proses_ulang',
+            })
+
+        self.assertEqual(response.status_code, 302)
+        penilaian.refresh_from_db()
+        self.assertEqual(penilaian.status, 'PENDING')
+        mock_delay.assert_called_once_with(penilaian.id)

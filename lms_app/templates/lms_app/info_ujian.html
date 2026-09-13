@@ -1,19 +1,12 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ judul }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 60px auto; text-align: center; line-height: 1.6; color: #333; }
-        .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px; background: #f9fafb; }
-        a { color: #2563eb; text-decoration: none; }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <h1>{{ judul }}</h1>
-        <p>{{ pesan }}</p>
-        <p><a href="{% url 'beranda' %}">Kembali ke Beranda</a></p>
+{% extends 'lms_app/base.html' %}
+
+{% block judul %}{{ judul }} - LMS AI{% endblock %}
+
+{% block konten %}
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-3">{{ judul }}</h1>
+        <p class="text-gray-600 mb-6">{{ pesan }}</p>
+        <a href="{% url 'beranda' %}"
+           class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition">Kembali ke Beranda</a>
     </div>
-</body>
-</html>
+{% endblock %}

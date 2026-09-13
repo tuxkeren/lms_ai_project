@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block judul %}LMS AI{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'beranda' %}" class="text-lg font-bold text-blue-600">LMS AI</a>
+            <div class="flex items-center gap-3 text-sm">
+                {% if user.is_authenticated %}
+                    <span class="text-gray-600">{{ user.username }}</span>
+                    {% if user.is_staff or user.is_superuser %}
+                        <a href="{% url 'dashboard_instruktur' %}" class="text-blue-600 hover:underline">Dashboard</a>
+                        <a href="/admin/" class="text-blue-600 hover:underline">Admin</a>
+                    {% endif %}
+                    <a href="/admin/logout/" class="text-gray-500 hover:underline">Logout</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 py-8">
+        {% block konten %}{% endblock %}
+    </main>
+</body>
+</html>

@@ -1,65 +1,43 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Beranda</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #333; }
-        h1 { color: #1f2937; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { padding: 12px 15px; border: 1px solid #e5e7eb; text-align: left; }
-        th { background-color: #f3f4f6; }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: white; }
-        .badge-aktif { background-color: #10b981; }
-        .badge-selesai { background-color: #6b7280; }
-        .badge-mendatang { background-color: #f59e0b; }
-        a { color: #2563eb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <h1>Selamat datang di Sistem Penilaian AI</h1>
-    <p>Pilih ujian yang tersedia untuk mulai mengerjakan soal.</p>
+{% extends 'lms_app/base.html' %}
 
-    <table>
-        <thead>
-            <tr>
-                <th>Ujian</th>
-                <th>Deskripsi</th>
-                <th>Waktu</th>
-                <th>Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in daftar_ujian %}
-            <tr>
-                <td><strong>{{ item.ujian.judul }}</strong></td>
-                <td>{{ item.ujian.deskripsi|default:"-"|truncatechars:60 }}</td>
-                <td>
-                    {{ item.ujian.waktu_mulai|date:"d M Y H:i" }} — {{ item.ujian.waktu_selesai|date:"d M Y H:i" }}
-                </td>
-                {% if item.status == 'selesai' %}
-                <td><span class="badge badge-selesai">Selesai</span></td>
-                <td>-</td>
+{% block judul %}Beranda - LMS AI{% endblock %}
+
+{% block konten %}
+    <h1 class="text-2xl font-bold text-gray-900 mb-1">Selamat datang di Sistem Penilaian AI</h1>
+    <p class="text-gray-600 mb-6">Pilih ujian yang tersedia untuk mulai mengerjakan soal.</p>
+
+    <div class="grid gap-4 md:grid-cols-2">
+        {% for item in daftar_ujian %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col">
+            <div class="flex items-start justify-between mb-2">
+                <h2 class="font-semibold text-lg text-gray-900">{{ item.ujian.judul }}</h2>
+                {% if item.status == 'aktif' %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Aktif</span>
                 {% elif item.status == 'mendatang' %}
-                <td><span class="badge badge-mendatang">Belum Dimulai</span></td>
-                <td>-</td>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Belum Dimulai</span>
                 {% else %}
-                <td><span class="badge badge-aktif">Aktif</span></td>
-                <td>
-                    {% if item.soal_pertama %}
-                    <a href="{% url 'jawab_soal' item.soal_pertama.id %}">Kerjakan</a>
-                    {% else %}Tidak ada soal{% endif %}
-                </td>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">Selesai</span>
                 {% endif %}
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" style="text-align: center; color: #6b7280;">Belum ada ujian tersedia.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
+            </div>
+            <p class="text-sm text-gray-500 mb-3">{{ item.ujian.deskripsi|default:"-"|truncatechars:80 }}</p>
+            <p class="text-xs text-gray-400 mb-4">
+                {{ item.ujian.waktu_mulai|date:"d M Y H:i" }} — {{ item.ujian.waktu_selesai|date:"d M Y H:i" }}
+            </p>
+            <div class="mt-auto">
+                {% if item.status == 'aktif' %}
+                    {% if item.soal_pertama %}
+                    <a href="{% url 'jawab_soal' item.soal_pertama.id %}"
+                       class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition">Kerjakan</a>
+                    {% else %}
+                    <span class="text-xs text-gray-400">Tidak ada soal</span>
+                    {% endif %}
+                {% else %}
+                <span class="text-xs text-gray-400">Tidak tersedia</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 text-gray-500">Belum ada ujian tersedia.</div>
+        {% endfor %}
+    </div>
+{% endblock %}

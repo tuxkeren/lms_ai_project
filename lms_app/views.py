@@ -105,9 +105,23 @@ def is_instructor(user):
 def dashboard_instruktur(request):
     if request.method == 'POST':
         penilaian_id = request.POST.get('penilaian_id')
-        skor_mentah = request.POST.get('skor_akhir')
-
         penilaian = get_object_or_404(PenilaianAI, id=penilaian_id)
+
+        if request.POST.get('aksi') == 'proses_ulang':
+            penilaian.status = 'PENDING'
+            penilaian.skor_ai = None
+            penilaian.feedback_ai = None
+            penilaian.diproses_pada = None
+            penilaian.save()
+            try:
+                proses_penilaian_ai.delay(penilaian.id)
+            except Exception:
+                penilaian.status = 'FAILED'
+                penilaian.feedback_ai = 'Worker tidak tersedia. Coba lagi saat worker aktif.'
+                penilaian.save()
+            return redirect('dashboard_instruktur')
+
+        skor_mentah = request.POST.get('skor_akhir')
         if skor_mentah is not None and skor_mentah != '':
             skor_batas = penilaian.jawaban.soal.skor_maksimal
             try:
