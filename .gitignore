@@ -39,10 +39,12 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 /media/
-/static/
 staticfiles/
 *.pot
 *.mo
+
+# Node
+node_modules/
 
 # Celery
 celerybeat-schedule
