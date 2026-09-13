@@ -1,9 +1,33 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class Kursus(models.Model):
+    nama = models.CharField(max_length=255)
+    kode = models.CharField(max_length=20, unique=True)
+    deskripsi = models.TextField(blank=True, null=True)
+    dibuat_pada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Kursus'
+
+    def __str__(self):
+        return self.nama
+
+class Enrollmen(models.Model):
+    kursus = models.ForeignKey(Kursus, on_delete=models.CASCADE, related_name='daftar_enrollmen')
+    siswa = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollmen')
+    tanggal_enroll = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('kursus', 'siswa')
+
+    def __str__(self):
+        return f"{self.siswa.username} → {self.kursus.nama}"
+
 class Ujian(models.Model):
     judul = models.CharField(max_length=255)
     deskripsi = models.TextField(blank=True, null=True)
+    kursus = models.ForeignKey(Kursus, on_delete=models.CASCADE, related_name='daftar_ujian', null=True, blank=True)
     waktu_mulai = models.DateTimeField()
     waktu_selesai = models.DateTimeField()
     dibuat_pada = models.DateTimeField(auto_now_add=True)

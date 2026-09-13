@@ -1,7 +1,19 @@
 from django.contrib import admin
-from .models import Ujian, Soal, JawabanSiswa, PenilaianAI
+from .models import Ujian, Soal, JawabanSiswa, PenilaianAI, Kursus, Enrollmen
 
-# Fitur Inline: Agar bisa input Soal langsung di halaman pembuatan Ujian
+class EnrollmenInline(admin.TabularInline):
+    model = Enrollmen
+    extra = 1
+
+@admin.register(Kursus)
+class KursusAdmin(admin.ModelAdmin):
+    list_display = ('kode', 'nama', 'jumlah_siswa')
+    search_fields = ('kode', 'nama')
+    inlines = [EnrollmenInline]
+
+    def jumlah_siswa(self, obj):
+        return obj.daftar_enrollmen.count()
+    jumlah_siswa.short_description = 'Jumlah Siswa'
 class SoalInline(admin.StackedInline):
     model = Soal
     extra = 1  # Jumlah form kosong soal yang ditampilkan secara default
@@ -9,9 +21,9 @@ class SoalInline(admin.StackedInline):
 
 @admin.register(Ujian)
 class UjianAdmin(admin.ModelAdmin):
-    list_display = ('judul', 'waktu_mulai', 'waktu_selesai', 'dibuat_pada')
+    list_display = ('judul', 'kursus', 'waktu_mulai', 'waktu_selesai', 'dibuat_pada')
+    list_filter = ('kursus', 'waktu_mulai')
     search_fields = ('judul',)
-    list_filter = ('waktu_mulai',)
     inlines = [SoalInline] # Menyematkan input soal ke dalam form Ujian
 
 @admin.register(Soal)

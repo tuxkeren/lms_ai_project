@@ -3,13 +3,22 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse
 from django.utils import timezone
 from .models import Ujian, Soal, JawabanSiswa, PenilaianAI
+from .services import is_student, terdaftar_di_kursus
 from .tasks import proses_penilaian_ai
 
 
 def beranda(request):
     sekarang = timezone.now()
+    user = request.user
+
+    ujian_queryset = Ujian.objects.prefetch_related('daftar_soal').order_by('-waktu_mulai')
+    if user.is_authenticated and not user.is_staff and not user.is_superuser:
+        ujian_queryset = ujian_queryset.filter(
+            kursus__daftar_enrollmen__siswa=user
+        ).distinct()
+
     daftar_ujian = []
-    for ujian in Ujian.objects.prefetch_related('daftar_soal').order_by('-waktu_mulai'):
+    for ujian in ujian_queryset:
         soal_pertama = ujian.daftar_soal.first()
         if sekarang < ujian.waktu_mulai:
             status = 'mendatang'
@@ -22,6 +31,7 @@ def beranda(request):
             'status': status,
             'soal_pertama': soal_pertama,
         })
+
     context = {
         'daftar_ujian': daftar_ujian,
         'waktu_sekarang': sekarang,
@@ -32,7 +42,20 @@ def beranda(request):
 @login_required(login_url='/admin/login/')
 def form_jawab_soal(request, soal_id):
     soal = get_object_or_404(Soal, id=soal_id)
+    user = request.user
     sekarang = timezone.now()
+
+    if not (user.is_staff or user.is_superuser):
+        if not is_student(user):
+            return render(request, 'lms_app/info_ujian.html', {
+                'judul': 'Tidak Diizinkan',
+                'pesan': 'Akun ini bukan role Student. Silakan hubungi admin.',
+            }, status=403)
+        if not terdaftar_di_kursus(user, soal.ujian.kursus):
+            return render(request, 'lms_app/info_ujian.html', {
+                'judul': 'Tidak Terdaftar',
+                'pesan': 'Anda belum terdaftar di kursus ini. Hubungi instruktur untuk enroll.',
+            }, status=403)
 
     if sekarang < soal.ujian.waktu_mulai:
         return render(request, 'lms_app/info_ujian.html', {
@@ -45,7 +68,7 @@ def form_jawab_soal(request, soal_id):
             'pesan': 'Waktu ujian sudah habis. Jawaban tidak dapat dikirim lagi.',
         })
 
-    if JawabanSiswa.objects.filter(soal=soal, siswa=request.user).exists():
+    if JawabanSiswa.objects.filter(soal=soal, siswa=user).exists():
         return render(request, 'lms_app/info_ujian.html', {
             'judul': 'Jawaban Telah Terkirim',
             'pesan': 'Anda sudah mengirimkan jawaban untuk soal ini. Sedang menunggu hasil.',
@@ -56,7 +79,7 @@ def form_jawab_soal(request, soal_id):
         if teks:
             jawaban_baru = JawabanSiswa.objects.create(
                 soal=soal,
-                siswa=request.user,
+                siswa=user,
                 teks_jawaban=teks
             )
             penilaian_baru = PenilaianAI.objects.create(jawaban=jawaban_baru)
