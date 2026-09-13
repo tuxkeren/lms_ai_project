@@ -3,8 +3,8 @@ from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Ujian, Soal, JawabanSiswa, PenilaianAI, Kursus, Enrollmen
-from .services import group_student, NAMA_GROUP_STUDENT
+from .models import Ujian, Soal, JawabanSiswa, PenilaianAI, Kursus, Enrollmen, Pengajaran
+from .services import group_student, group_teacher, NAMA_GROUP_STUDENT
 
 
 class ModelTestCase(TestCase):
@@ -86,6 +86,27 @@ class ViewTestCase(TestCase):
             kunci_jawaban='Kunci soal kursus lain.',
         )
 
+        self.guru = self._buat_guru('guru')
+        group_teacher().user_set.add(self.guru)
+        self.guru_lain = self._buat_guru('guru_lain')
+        Pengajaran.objects.create(guru=self.guru, kursus=self.kursus)
+        Pengajaran.objects.create(guru=self.guru_lain, kursus=self.kursus_lain)
+
+        self.ujian_fisika = Ujian.objects.create(
+            judul='Ujian Fisika',
+            kursus=self.kursus_lain,
+            waktu_mulai=timezone.now() - timedelta(hours=1),
+            waktu_selesai=timezone.now() + timedelta(hours=1),
+        )
+        self.soal_fisika = Soal.objects.create(
+            ujian=self.ujian_fisika,
+            teks_soal='Soal Fisika.',
+            kunci_jawaban='Kunci Fisika.',
+        )
+
+    def _buat_guru(self, username):
+        return User.objects.create_user(username=username, password='tes12345')
+
     def test_beranda_terbuka_tanpa_login(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
@@ -101,6 +122,36 @@ class ViewTestCase(TestCase):
         self.assertRedirects(response, '/')
         page = self.client.get('/')
         self.assertNotContains(page, 'siswa')
+
+    def test_login_halaman_tampil(self):
+        response = self.client.get('/masuk/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Masuk ke LMS AI')
+
+    def test_login_berhasil_redirect_ke_beranda(self):
+        response = self.client.post('/masuk/', {
+            'username': 'siswa',
+            'password': 'tes12345',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/')
+
+    def test_login_password_salah_menampilkan_error(self):
+        response = self.client.post('/masuk/', {
+            'username': 'siswa',
+            'password': 'salah',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Masuk ke LMS AI')
+
+    def test_login_hormati_next_url(self):
+        response = self.client.post('/masuk/?next=/soal/1/jawab/', {
+            'username': 'siswa',
+            'password': 'tes12345',
+            'next': '/soal/1/jawab/',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/soal/1/jawab/')
 
     def test_logout_menolak_get(self):
         self.client.login(username='siswa', password='tes12345')
@@ -168,3 +219,49 @@ class ViewTestCase(TestCase):
         penilaian.refresh_from_db()
         self.assertEqual(penilaian.status, 'PENDING')
         mock_delay.assert_called_once_with(penilaian.id)
+
+    def test_teacher_bisa_akses_dashboard(self):
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.get('/dashboard/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_teacher_hanya_lihat_ujian_dari_kursus_diajar(self):
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.get('/')
+        self.assertContains(response, 'Ujian Tengah Semester')
+        self.assertNotContains(response, 'Ujian Fisika')
+
+    def test_teacher_bisa_akses_soal_kursus_diajar(self):
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.get(f'/soal/{self.soal.id}/jawab/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_teacher_ditolak_soal_kursus_bukan_diajar(self):
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.get(f'/soal/{self.soal_fisika.id}/jawab/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_dashboard_teacher_hanya_melihat_penilaian_kursus_diajar(self):
+        JawabanSiswa.objects.create(soal=self.soal, siswa=self.siswa, teks_jawaban='jawaban mat')
+        PenilaianAI.objects.create(jawaban=JawabanSiswa.objects.get(soal=self.soal, siswa=self.siswa))
+
+        siswa_lain = User.objects.create_user(username='siswa_lain', password='tes12345')
+        JawabanSiswa.objects.create(soal=self.soal_fisika, siswa=siswa_lain, teks_jawaban='jawaban fis')
+        PenilaianAI.objects.create(jawaban=JawabanSiswa.objects.get(soal=self.soal_fisika, siswa=siswa_lain))
+
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.get('/dashboard/')
+        self.assertContains(response, 'siswa')
+        self.assertNotContains(response, 'siswa_lain')
+
+    def test_teacher_tidak_bisa_proses_ulang_penilaian_kursus_lain(self):
+        jawaban = JawabanSiswa.objects.create(
+            soal=self.soal_fisika, siswa=self.siswa, teks_jawaban='jawaban fis')
+        penilaian = PenilaianAI.objects.create(jawaban=jawaban)
+
+        self.client.login(username='guru', password='tes12345')
+        response = self.client.post('/dashboard/', {
+            'penilaian_id': penilaian.id,
+            'aksi': 'proses_ulang',
+        })
+        self.assertEqual(response.status_code, 403)

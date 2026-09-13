@@ -1,19 +1,34 @@
 from django.contrib import admin
-from .models import Ujian, Soal, JawabanSiswa, PenilaianAI, Kursus, Enrollmen
+from .models import Ujian, Soal, JawabanSiswa, PenilaianAI, Kursus, Enrollmen, Pengajaran
 
 class EnrollmenInline(admin.TabularInline):
     model = Enrollmen
     extra = 1
 
+class PengajaranInline(admin.TabularInline):
+    model = Pengajaran
+    extra = 1
+
 @admin.register(Kursus)
 class KursusAdmin(admin.ModelAdmin):
-    list_display = ('kode', 'nama', 'jumlah_siswa')
+    list_display = ('kode', 'nama', 'jumlah_siswa', 'daftar_guru')
     search_fields = ('kode', 'nama')
-    inlines = [EnrollmenInline]
+    inlines = [EnrollmenInline, PengajaranInline]
 
     def jumlah_siswa(self, obj):
         return obj.daftar_enrollmen.count()
     jumlah_siswa.short_description = 'Jumlah Siswa'
+
+    def daftar_guru(self, obj):
+        return ", ".join(p.guru.username for p in obj.daftar_pengajaran.all())
+    daftar_guru.short_description = 'Pengajar'
+
+@admin.register(Pengajaran)
+class PengajaranAdmin(admin.ModelAdmin):
+    list_display = ('guru', 'kursus', 'tanggal_penugasan')
+    list_filter = ('kursus',)
+    search_fields = ('guru__username', 'kursus__nama')
+
 class SoalInline(admin.StackedInline):
     model = Soal
     extra = 1  # Jumlah form kosong soal yang ditampilkan secara default

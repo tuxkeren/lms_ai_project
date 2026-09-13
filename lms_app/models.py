@@ -24,6 +24,17 @@ class Enrollmen(models.Model):
     def __str__(self):
         return f"{self.siswa.username} → {self.kursus.nama}"
 
+class Pengajaran(models.Model):
+    guru = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pengajaran')
+    kursus = models.ForeignKey(Kursus, on_delete=models.CASCADE, related_name='daftar_pengajaran')
+    tanggal_penugasan = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('kursus', 'guru')
+
+    def __str__(self):
+        return f"{self.guru.username} mengajar {self.kursus.nama}"
+
 class Ujian(models.Model):
     judul = models.CharField(max_length=255)
     deskripsi = models.TextField(blank=True, null=True)

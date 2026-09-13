@@ -25,6 +25,7 @@
                     <td class="px-4 py-3">
                         <div class="font-medium text-gray-900">{{ p.jawaban.siswa.username }}</div>
                         <div class="text-xs text-gray-500">{{ p.jawaban.soal.ujian.judul }}</div>
+                        <div class="text-xs text-gray-400">{{ p.jawaban.soal.ujian.kursus.nama|default:"-" }}</div>
                     </td>
                     <td class="px-4 py-3">
                         <div class="font-medium text-gray-900">{{ p.jawaban.soal.teks_soal|truncatechars:80 }}</div>

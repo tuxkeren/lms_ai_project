@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import logout
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 from django.utils import timezone
 from .models import Ujian, Soal, JawabanSiswa, PenilaianAI
-from .services import is_student, terdaftar_di_kursus
+from .services import is_student, is_teacher, terdaftar_di_kursus, mengajar_kursus
 from .tasks import proses_penilaian_ai
 
 
@@ -15,15 +16,38 @@ def keluar(request):
     return redirect('beranda')
 
 
+def masuk(request):
+    if request.user.is_authenticated:
+        return redirect('beranda')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            next_url = request.POST.get('next', '')
+            if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+                return redirect(next_url)
+            return redirect('beranda')
+    else:
+        form = AuthenticationForm(request)
+
+    return render(request, 'lms_app/login.html', {'form': form})
+
+
 def beranda(request):
     sekarang = timezone.now()
     user = request.user
 
     ujian_queryset = Ujian.objects.prefetch_related('daftar_soal').order_by('-waktu_mulai')
     if user.is_authenticated and not user.is_staff and not user.is_superuser:
-        ujian_queryset = ujian_queryset.filter(
-            kursus__daftar_enrollmen__siswa=user
-        ).distinct()
+        if is_teacher(user):
+            ujian_queryset = ujian_queryset.filter(
+                kursus__daftar_pengajaran__guru=user
+            ).distinct()
+        else:
+            ujian_queryset = ujian_queryset.filter(
+                kursus__daftar_enrollmen__siswa=user
+            ).distinct()
 
     daftar_ujian = []
     for ujian in ujian_queryset:
@@ -47,19 +71,25 @@ def beranda(request):
     return render(request, 'lms_app/beranda.html', context)
 
 
-@login_required(login_url='/admin/login/')
+@login_required(login_url='masuk')
 def form_jawab_soal(request, soal_id):
     soal = get_object_or_404(Soal, id=soal_id)
     user = request.user
     sekarang = timezone.now()
 
     if not (user.is_staff or user.is_superuser):
-        if not is_student(user):
+        if is_teacher(user):
+            if not mengajar_kursus(user, soal.ujian.kursus):
+                return render(request, 'lms_app/info_ujian.html', {
+                    'judul': 'Tidak Mengajar',
+                    'pesan': 'Anda hanya dapat mengakses soal dari kursus yang Anda ajarkan.',
+                }, status=403)
+        elif not is_student(user):
             return render(request, 'lms_app/info_ujian.html', {
                 'judul': 'Tidak Diizinkan',
                 'pesan': 'Akun ini bukan role Student. Silakan hubungi admin.',
             }, status=403)
-        if not terdaftar_di_kursus(user, soal.ujian.kursus):
+        elif not terdaftar_di_kursus(user, soal.ujian.kursus):
             return render(request, 'lms_app/info_ujian.html', {
                 'judul': 'Tidak Terdaftar',
                 'pesan': 'Anda belum terdaftar di kursus ini. Hubungi instruktur untuk enroll.',
@@ -106,14 +136,18 @@ def form_jawab_soal(request, soal_id):
 
 
 def is_instructor(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
+    return user.is_authenticated and (user.is_staff or user.is_superuser or is_teacher(user))
 
 
-@user_passes_test(is_instructor, login_url='/admin/login/')
+@user_passes_test(is_instructor, login_url='masuk')
 def dashboard_instruktur(request):
     if request.method == 'POST':
         penilaian_id = request.POST.get('penilaian_id')
         penilaian = get_object_or_404(PenilaianAI, id=penilaian_id)
+
+        if not (request.user.is_staff or request.user.is_superuser):
+            if not mengajar_kursus(request.user, penilaian.jawaban.soal.ujian.kursus):
+                return HttpResponse("Anda hanya dapat mengelola penilaian dari kursus yang Anda ajarkan.", status=403)
 
         if request.POST.get('aksi') == 'proses_ulang':
             penilaian.status = 'PENDING'
@@ -148,6 +182,11 @@ def dashboard_instruktur(request):
     daftar_penilaian = PenilaianAI.objects.select_related(
         'jawaban', 'jawaban__siswa', 'jawaban__soal', 'jawaban__soal__ujian'
     ).order_by('-id')
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        daftar_penilaian = daftar_penilaian.filter(
+            jawaban__soal__ujian__kursus__daftar_pengajaran__guru=request.user
+        ).distinct()
 
     context = {
         'daftar_penilaian': daftar_penilaian,
