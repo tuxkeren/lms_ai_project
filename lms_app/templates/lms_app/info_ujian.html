@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ judul }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 60px auto; text-align: center; line-height: 1.6; color: #333; }
+        .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px; background: #f9fafb; }
+        a { color: #2563eb; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>{{ judul }}</h1>
+        <p>{{ pesan }}</p>
+        <p><a href="{% url 'beranda' %}">Kembali ke Beranda</a></p>
+    </div>
+</body>
+</html>

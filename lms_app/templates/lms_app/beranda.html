@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Beranda</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #333; }
+        h1 { color: #1f2937; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; border: 1px solid #e5e7eb; text-align: left; }
+        th { background-color: #f3f4f6; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: white; }
+        .badge-aktif { background-color: #10b981; }
+        .badge-selesai { background-color: #6b7280; }
+        .badge-mendatang { background-color: #f59e0b; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Selamat datang di Sistem Penilaian AI</h1>
+    <p>Pilih ujian yang tersedia untuk mulai mengerjakan soal.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Ujian</th>
+                <th>Deskripsi</th>
+                <th>Waktu</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in daftar_ujian %}
+            <tr>
+                <td><strong>{{ item.ujian.judul }}</strong></td>
+                <td>{{ item.ujian.deskripsi|default:"-"|truncatechars:60 }}</td>
+                <td>
+                    {{ item.ujian.waktu_mulai|date:"d M Y H:i" }} — {{ item.ujian.waktu_selesai|date:"d M Y H:i" }}
+                </td>
+                {% if item.status == 'selesai' %}
+                <td><span class="badge badge-selesai">Selesai</span></td>
+                <td>-</td>
+                {% elif item.status == 'mendatang' %}
+                <td><span class="badge badge-mendatang">Belum Dimulai</span></td>
+                <td>-</td>
+                {% else %}
+                <td><span class="badge badge-aktif">Aktif</span></td>
+                <td>
+                    {% if item.soal_pertama %}
+                    <a href="{% url 'jawab_soal' item.soal_pertama.id %}">Kerjakan</a>
+                    {% else %}Tidak ada soal{% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #6b7280;">Belum ada ujian tersedia.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
