@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Jawab Soal</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; line-height: 1.6;}
+        textarea { width: 100%; height: 150px; padding: 10px; margin-bottom: 15px; }
+        button { padding: 10px 20px; background-color: #2563eb; color: white; border: none; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <h2>Ujian: {{ soal.ujian.judul }}</h2>
+    <hr>
+    
+    <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <strong>Pertanyaan:</strong><br>
+        {{ soal.teks_soal }}
+    </div>
+
+    <form method="POST">
+        {% csrf_token %} <!-- Wajib di Django untuk keamanan form -->
+        
+        <label for="teks_jawaban"><strong>Jawaban Anda:</strong></label><br>
+        <textarea name="teks_jawaban" id="teks_jawaban" placeholder="Ketik jawaban Anda di sini..." required></textarea><br>
+        
+        <button type="submit">Kirim Jawaban</button>
+    </form>
+</body>
+</html>
